@@ -33,10 +33,10 @@ const server = new Server(
 server.setRequestHandler(ListResourcesRequestSchema, async (request) => {
   const [allTasks, nextPageToken] = await TaskResources.list(request, tasks);
   return {
-    resources: allTasks.map((task) => ({
+    resources: allTasks.map((task, index) => ({
       uri: `gtasks:///${task.id}`,
       mimeType: "text/plain",
-      name: task.title,
+      name: `${index + 1}. ${task.title}`,
     })),
     nextCursor: nextPageToken,
   };

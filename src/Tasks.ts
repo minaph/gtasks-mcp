@@ -90,7 +90,9 @@ export class TaskActions {
   }
 
   private static formatTaskList(taskList: tasks_v1.Schema$Task[]) {
-    return taskList.map((task) => this.formatTask(task)).join("\n");
+    return taskList
+      .map((task, index) => `${index + 1}. ${this.formatTask(task)}`)
+      .join("\n");
   }
 
   private static async _list(request: CallToolRequest, tasks: tasks_v1.Tasks) {
@@ -252,7 +254,7 @@ export class TaskActions {
       content: [
         {
           type: "text",
-          text: `Found ${allTasks.length} tasks:\n${taskList}`,
+          text: `Found ${filteredItems.length} tasks:\n${taskList}`,
         },
       ],
       isError: false,
