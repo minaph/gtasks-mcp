@@ -277,4 +277,52 @@ export class TaskActions {
       isError: false,
     };
   }
+
+  static async listTaskLists(
+    request: CallToolRequest,
+    tasks: tasks_v1.Tasks,
+  ): Promise<CallToolResult> {
+    const pageSizeArg = request.params.arguments?.pageSize as number | undefined;
+    const cursorArg = request.params.arguments?.cursor as string | undefined;
+
+    const maxResults = typeof pageSizeArg === "number" && pageSizeArg > 0
+      ? pageSizeArg
+      : MAX_TASK_RESULTS;
+
+    const params: tasks_v1.Params$Resource$Tasklists$List = {
+      maxResults,
+    } as tasks_v1.Params$Resource$Tasklists$List;
+
+    if (cursorArg) {
+      (params as any).pageToken = cursorArg;
+    }
+
+    const taskListsResponse: GaxiosResponse<tasks_v1.Schema$TaskLists> =
+      await tasks.tasklists.list(params as any);
+
+    const taskLists = taskListsResponse.data.items || [];
+    const nextCursor = taskListsResponse.data.nextPageToken || null;
+
+    const formatted = taskLists
+      .map((list) => {
+        const title = list.title || "Untitled";
+        const id = list.id || "Unknown";
+        const updated = list.updated || "Unknown";
+        return `Title: ${title} - ID: ${id} - Updated: ${updated}`;
+      })
+      .join("\n");
+
+    const header = `Found ${taskLists.length} task lists:`;
+    const footer = nextCursor ? `\nnextCursor: ${nextCursor}` : "";
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: `${header}${taskLists.length ? "\n" : ""}${formatted}${footer}`,
+        },
+      ],
+      isError: false,
+    };
+  }
 }

@@ -105,6 +105,23 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
+        name: "listTaskLists",
+        description: "List Google Task lists (ids and titles)",
+        inputSchema: {
+          type: "object",
+          properties: {
+            pageSize: {
+              type: "number",
+              description: "Max results to return",
+            },
+            cursor: {
+              type: "string",
+              description: "Cursor for pagination",
+            },
+          },
+        },
+      },
+      {
         name: "create",
         description: "Create a new task in Google Tasks",
         inputSchema: {
@@ -212,6 +229,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   }
   if (request.params.name === "list") {
     const taskResult = await TaskActions.list(request, tasks);
+    return taskResult;
+  }
+  if (request.params.name === "listTaskLists") {
+    const taskResult = await TaskActions.listTaskLists(request, tasks);
     return taskResult;
   }
   if (request.params.name === "create") {

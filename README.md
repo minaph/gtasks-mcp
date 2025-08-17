@@ -19,6 +19,15 @@ This MCP server integrates with Google Tasks to allow listing, reading, searchin
   - Optional input: `cursor` (string): Cursor for pagination
   - Returns a list of all tasks
 
+- **listTaskLists**
+  - List Google Task lists (their `id` and `title`)
+  - Optional input:
+    - `pageSize` (number): Max results to return
+    - `cursor` (string): Cursor for pagination
+  - Returns a text list like:
+    - `Title: <title> - ID: <id> - Updated: <updated>`
+    - `nextCursor: <token>` when there are more pages
+
 - **create**
   - Create a new task in Google Tasks
   - Input:
