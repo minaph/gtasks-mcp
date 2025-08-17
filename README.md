@@ -61,6 +61,18 @@ This MCP server integrates with Google Tasks to allow listing, reading, searchin
   - Input: `taskListId` (string, required): Task list ID
   - Returns confirmation of cleared tasks
 
+- **move**
+  - Move a task to another task list and/or change its position
+  - Input:
+    - `taskListId` (string, optional): Source task list ID (default: `@default`)
+    - `id` (string, required): Task ID to move
+    - `destinationTaskListId` (string, required): Destination task list ID
+    - `parent` (string, optional): Parent task ID in the destination list
+    - `previous` (string, optional): Sibling task ID after which to place the task
+  - Notes:
+    - Under the hood calls `tasks.tasks.move` with `destinationTasklist` query.
+    - Recurring tasks cannot be moved between lists.
+
 ### Resources
 
 The server provides access to Google Tasks resources:

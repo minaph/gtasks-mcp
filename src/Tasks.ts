@@ -364,4 +364,47 @@ export class TaskActions {
       isError: false,
     };
   }
+
+  static async move(request: CallToolRequest, tasks: tasks_v1.Tasks) {
+    const sourceTaskListId =
+      (request.params.arguments?.taskListId as string) || "@default";
+    const taskId = request.params.arguments?.id as string;
+    const destinationTaskListId =
+      (request.params.arguments?.destinationTaskListId as string) || "";
+    const parent = request.params.arguments?.parent as string | undefined;
+    const previous = request.params.arguments?.previous as string | undefined;
+
+    if (!taskId) {
+      throw new Error("Task ID is required");
+    }
+
+    if (!destinationTaskListId) {
+      throw new Error("destinationTaskListId is required");
+    }
+
+    const params: any = {
+      tasklist: sourceTaskListId,
+      task: taskId,
+      destinationTasklist: destinationTaskListId,
+    } as tasks_v1.Params$Resource$Tasks$Move;
+
+    if (parent) {
+      params.parent = parent;
+    }
+    if (previous) {
+      params.previous = previous;
+    }
+
+    await tasks.tasks.move(params);
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Task ${taskId} moved to list ${destinationTaskListId}${parent ? ` (parent=${parent})` : ""}${previous ? ` (after=${previous})` : ""}`,
+        },
+      ],
+      isError: false,
+    };
+  }
 }

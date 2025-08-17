@@ -234,6 +234,37 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           required: ["id", "uri"],
         },
       },
+      {
+        name: "move",
+        description:
+          "Move a task to another task list and/or change its position",
+        inputSchema: {
+          type: "object",
+          properties: {
+            taskListId: {
+              type: "string",
+              description: "Source task list ID (default: @default)",
+            },
+            id: {
+              type: "string",
+              description: "Task ID to move",
+            },
+            destinationTaskListId: {
+              type: "string",
+              description: "Destination task list ID",
+            },
+            parent: {
+              type: "string",
+              description: "Parent task ID in destination list (optional)",
+            },
+            previous: {
+              type: "string",
+              description: "Sibling task ID to place after (optional)",
+            },
+          },
+          required: ["id", "destinationTaskListId"],
+        },
+      },
     ],
   };
 });
@@ -265,6 +296,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   }
   if (request.params.name === "clear") {
     const taskResult = await TaskActions.clear(request, tasks);
+    return taskResult;
+  }
+  if (request.params.name === "move") {
+    const taskResult = await TaskActions.move(request, tasks);
     return taskResult;
   }
   throw new Error("Tool not found");
