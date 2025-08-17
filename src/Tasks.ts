@@ -8,6 +8,8 @@ import { GaxiosResponse } from "gaxios";
 import { tasks_v1 } from "googleapis";
 
 const MAX_TASK_RESULTS = 100;
+const DEFAULT_SHOW_COMPLETED = false;
+const DEFAULT_SHOW_DELETED = false;
 
 export class TaskResources {
   static async read(request: ReadResourceRequest, tasks: tasks_v1.Tasks) {
@@ -51,6 +53,12 @@ export class TaskResources {
     const pageSize = 10;
     const params: any = {
       maxResults: pageSize,
+      showCompleted:
+        (request.params?.showCompleted as boolean | undefined) ??
+        DEFAULT_SHOW_COMPLETED,
+      showDeleted:
+        (request.params?.showDeleted as boolean | undefined) ??
+        DEFAULT_SHOW_DELETED,
     };
 
     if (request.params?.cursor) {
@@ -73,7 +81,18 @@ export class TaskResources {
       });
 
       const taskItems = tasksResponse.data.items || [];
-      allTasks = allTasks.concat(taskItems);
+      const showCompletedArg =
+        (request.params?.showCompleted as boolean | undefined) ??
+        DEFAULT_SHOW_COMPLETED;
+      const showDeletedArg =
+        (request.params?.showDeleted as boolean | undefined) ??
+        DEFAULT_SHOW_DELETED;
+      const visibleItems = taskItems.filter((t) => {
+        const completedOk = showCompletedArg || t.status !== "completed";
+        const deletedOk = showDeletedArg || !t.deleted;
+        return completedOk && deletedOk;
+      });
+      allTasks = allTasks.concat(visibleItems);
 
       if (tasksResponse.data.nextPageToken) {
         nextPageToken = tasksResponse.data.nextPageToken;
@@ -109,10 +128,28 @@ export class TaskActions {
           const tasksResponse = await tasks.tasks.list({
             tasklist: taskList.id,
             maxResults: MAX_TASK_RESULTS,
+            showCompleted:
+              (request.params.arguments?.showCompleted as boolean | undefined) ??
+              DEFAULT_SHOW_COMPLETED,
+            showDeleted:
+              (request.params.arguments?.showDeleted as boolean | undefined) ??
+              DEFAULT_SHOW_DELETED,
           });
 
           const items = tasksResponse.data.items || [];
-          allTasks = allTasks.concat(items);
+          const showCompletedArg =
+            (request.params.arguments?.showCompleted as boolean | undefined) ??
+            DEFAULT_SHOW_COMPLETED;
+          const showDeletedArg =
+            (request.params.arguments?.showDeleted as boolean | undefined) ??
+            DEFAULT_SHOW_DELETED;
+
+          const visibleItems = items.filter((t) => {
+            const completedOk = showCompletedArg || t.status !== "completed";
+            const deletedOk = showDeletedArg || !t.deleted;
+            return completedOk && deletedOk;
+          });
+          allTasks = allTasks.concat(visibleItems);
         } catch (error) {
           console.error(`Error fetching tasks for list ${taskList.id}:`, error);
         }

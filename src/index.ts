@@ -87,6 +87,14 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
               type: "string",
               description: "Search query",
             },
+            showCompleted: {
+              type: "boolean",
+              description: "Whether to include completed tasks (default: false)",
+            },
+            showDeleted: {
+              type: "boolean",
+              description: "Whether to include deleted tasks (default: false)",
+            },
           },
           required: ["query"],
         },
@@ -100,6 +108,14 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             cursor: {
               type: "string",
               description: "Cursor for pagination",
+            },
+            showCompleted: {
+              type: "boolean",
+              description: "Whether to include completed tasks (default: false)",
+            },
+            showDeleted: {
+              type: "boolean",
+              description: "Whether to include deleted tasks (default: false)",
             },
           },
         },
