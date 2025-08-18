@@ -105,6 +105,11 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         inputSchema: {
           type: "object",
           properties: {
+            taskListId: {
+              type: "string",
+              description:
+                "Task list ID to filter by (when omitted, aggregates all lists)",
+            },
             cursor: {
               type: "string",
               description: "Cursor for pagination",
