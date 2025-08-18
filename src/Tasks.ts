@@ -48,7 +48,7 @@ export class TaskResources {
 
   static async list(
     request: ListResourcesRequest,
-    tasks: tasks_v1.Tasks,
+    tasks: tasks_v1.Tasks
   ): Promise<[tasks_v1.Schema$Task[], string | null]> {
     const pageSize = 10;
     const params: any = {
@@ -105,7 +105,17 @@ export class TaskResources {
 
 export class TaskActions {
   private static formatTask(task: tasks_v1.Schema$Task) {
-    return `${task.title}\n (Due: ${task.due || "Not set"}) - Notes: ${task.notes} - ID: ${task.id} - Status: ${task.status} - URI: ${task.selfLink} - Hidden: ${task.hidden} - Parent: ${task.parent} - Deleted?: ${task.deleted} - Completed Date: ${task.completed} - Position: ${task.position} - Updated Date: ${task.updated} - ETag: ${task.etag} - Links: ${task.links} - Kind: ${task.kind}}`;
+    return `${task.title}\n (Due: ${task.due || "Not set"}) - Notes: ${
+      task.notes
+    } - ID: ${task.id} - Status: ${task.status} - URI: ${
+      task.selfLink
+    } - Hidden: ${task.hidden} - Parent: ${task.parent} - Deleted?: ${
+      task.deleted
+    } - Completed Date: ${task.completed} - Position: ${
+      task.position
+    } - Updated Date: ${task.updated} - ETag: ${task.etag} - Links: ${
+      task.links
+    } - Kind: ${task.kind}}`;
   }
 
   private static formatTaskList(taskList: tasks_v1.Schema$Task[]) {
@@ -115,44 +125,53 @@ export class TaskActions {
   }
 
   private static async _list(request: CallToolRequest, tasks: tasks_v1.Tasks) {
-    const taskListsResponse = await tasks.tasklists.list({
-      maxResults: MAX_TASK_RESULTS,
-    });
+    const taskListIdArg = request.params.arguments?.taskListId as
+      | string
+      | undefined;
 
-    const taskLists = taskListsResponse.data.items || [];
+    const showCompletedArg =
+      (request.params.arguments?.showCompleted as boolean | undefined) ??
+      DEFAULT_SHOW_COMPLETED;
+    const showDeletedArg =
+      (request.params.arguments?.showDeleted as boolean | undefined) ??
+      DEFAULT_SHOW_DELETED;
+
+    const baseParams = {
+      maxResults: MAX_TASK_RESULTS,
+      showCompleted: showCompletedArg,
+      showDeleted: showDeletedArg,
+    } as const;
+
+    let taskListsIds: string[] = [];
+    if (taskListIdArg) {
+      taskListsIds = [taskListIdArg];
+    } else {
+      // Otherwise, aggregate across all task lists
+      const taskListsResponse = await tasks.tasklists.list({
+        maxResults: MAX_TASK_RESULTS,
+      });
+      const taskLists = taskListsResponse.data.items || [];
+      taskListsIds = taskLists.map((t) => t.id).filter(Boolean) as string[];
+    }
+
     let allTasks: tasks_v1.Schema$Task[] = [];
 
-    for (const taskList of taskLists) {
-      if (taskList.id) {
-        try {
-          const tasksResponse = await tasks.tasks.list({
-            tasklist: taskList.id,
-            maxResults: MAX_TASK_RESULTS,
-            showCompleted:
-              (request.params.arguments?.showCompleted as boolean | undefined) ??
-              DEFAULT_SHOW_COMPLETED,
-            showDeleted:
-              (request.params.arguments?.showDeleted as boolean | undefined) ??
-              DEFAULT_SHOW_DELETED,
-          });
+    for (const taskListId of taskListsIds) {
+      try {
+        const tasksResponse = await tasks.tasks.list({
+          tasklist: taskListId,
+          ...baseParams,
+        });
 
-          const items = tasksResponse.data.items || [];
-          const showCompletedArg =
-            (request.params.arguments?.showCompleted as boolean | undefined) ??
-            DEFAULT_SHOW_COMPLETED;
-          const showDeletedArg =
-            (request.params.arguments?.showDeleted as boolean | undefined) ??
-            DEFAULT_SHOW_DELETED;
-
-          const visibleItems = items.filter((t) => {
-            const completedOk = showCompletedArg || t.status !== "completed";
-            const deletedOk = showDeletedArg || !t.deleted;
-            return completedOk && deletedOk;
-          });
-          allTasks = allTasks.concat(visibleItems);
-        } catch (error) {
-          console.error(`Error fetching tasks for list ${taskList.id}:`, error);
-        }
+        const items = tasksResponse.data.items || [];
+        const visibleItems = items.filter((t) => {
+          const completedOk = showCompletedArg || t.status !== "completed";
+          const deletedOk = showDeletedArg || !t.deleted;
+          return completedOk && deletedOk;
+        });
+        allTasks = allTasks.concat(visibleItems);
+      } catch (error) {
+        console.error(`Error fetching tasks for list ${taskListId}:`, error);
       }
     }
     return allTasks;
@@ -282,7 +301,7 @@ export class TaskActions {
     const filteredItems = allTasks.filter(
       (task) =>
         task.title?.toLowerCase().includes(userQuery.toLowerCase()) ||
-        task.notes?.toLowerCase().includes(userQuery.toLowerCase()),
+        task.notes?.toLowerCase().includes(userQuery.toLowerCase())
     );
 
     const taskList = this.formatTaskList(filteredItems);
@@ -319,14 +338,17 @@ export class TaskActions {
 
   static async listTaskLists(
     request: CallToolRequest,
-    tasks: tasks_v1.Tasks,
+    tasks: tasks_v1.Tasks
   ): Promise<CallToolResult> {
-    const pageSizeArg = request.params.arguments?.pageSize as number | undefined;
+    const pageSizeArg = request.params.arguments?.pageSize as
+      | number
+      | undefined;
     const cursorArg = request.params.arguments?.cursor as string | undefined;
 
-    const maxResults = typeof pageSizeArg === "number" && pageSizeArg > 0
-      ? pageSizeArg
-      : MAX_TASK_RESULTS;
+    const maxResults =
+      typeof pageSizeArg === "number" && pageSizeArg > 0
+        ? pageSizeArg
+        : MAX_TASK_RESULTS;
 
     const params: tasks_v1.Params$Resource$Tasklists$List = {
       maxResults,
@@ -401,7 +423,9 @@ export class TaskActions {
       content: [
         {
           type: "text",
-          text: `Task ${taskId} moved to list ${destinationTaskListId}${parent ? ` (parent=${parent})` : ""}${previous ? ` (after=${previous})` : ""}`,
+          text: `Task ${taskId} moved to list ${destinationTaskListId}${
+            parent ? ` (parent=${parent})` : ""
+          }${previous ? ` (after=${previous})` : ""}`,
         },
       ],
       isError: false,
