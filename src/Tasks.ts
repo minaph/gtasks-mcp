@@ -122,7 +122,7 @@ export class TaskActions {
 
   static formatTask(
     task: tasks_v1.Schema$Task,
-    detailed: boolean = false,
+    detailed: boolean = true,
   ) {
     if (detailed) {
       const content = fmt`${task.title}
