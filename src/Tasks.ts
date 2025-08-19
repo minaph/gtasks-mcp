@@ -7,6 +7,16 @@ import {
 import { GaxiosResponse } from "gaxios";
 import { tasks_v1 } from "googleapis";
 
+function fmt(strings: TemplateStringsArray, ...values: unknown[]): string {
+  const cooked = values.map((v) => (v === undefined ? false : v));
+  let out = "";
+  for (let i = 0; i < strings.length; i++) {
+    out += strings[i];
+    if (i < cooked.length) out += String(cooked[i]);
+  }
+  return out;
+}
+
 const MAX_TASK_RESULTS = 100;
 const DEFAULT_SHOW_COMPLETED = false;
 const DEFAULT_SHOW_DELETED = false;
@@ -104,23 +114,96 @@ export class TaskResources {
 }
 
 export class TaskActions {
-  private static formatTask(task: tasks_v1.Schema$Task) {
-    return `${task.title}\n (Due: ${task.due || "Not set"}) - Notes: ${
-      task.notes
-    } - ID: ${task.id} - Status: ${task.status} - URI: ${
-      task.selfLink
-    } - Hidden: ${task.hidden} - Parent: ${task.parent} - Deleted?: ${
-      task.deleted
-    } - Completed Date: ${task.completed} - Position: ${
-      task.position
-    } - Updated Date: ${task.updated} - ETag: ${task.etag} - Links: ${
-      task.links
-    } - Kind: ${task.kind}}`;
+  static indent(text: string, depth: number): string {
+    if (depth <= 0) return text;
+    const pad = "\t".repeat(depth);
+    return text.split("\n").map((line) => pad + line).join("\n");
+  }
+
+  static formatTask(
+    task: tasks_v1.Schema$Task,
+    detailed: boolean = false,
+  ) {
+    if (detailed) {
+      const content = fmt`${task.title}
+ (Due: ${task.due}) - Notes: ${task.notes} - ID: ${task.id} - Status: ${
+        task.status
+      } - Hidden: ${task.hidden} - Parent: ${
+        task.parent
+      } - Deleted?: ${task.deleted} - Completed Date: ${
+        task.completed
+      } - Position: ${task.position} - Updated Date: ${task.updated} - ETag: ${
+        task.etag
+      } - Links: ${task.links} - Kind: ${task.kind}}`;
+      return content;
+    }
+    const title = task.title || "Untitled";
+    const duePart = task.due ? fmt` (Due: ${task.due})` : "";
+    const line = fmt`${title}${duePart}`;
+    return line;
+  }
+
+  private static comparePosition(
+    a: string | null | undefined,
+    b: string | null | undefined,
+  ): number {
+    if (!a && !b) return 0;
+    if (!a) return 1;
+    if (!b) return -1;
+    return a.localeCompare(b);
+  }
+
+  static buildHierarchy(
+    tasksInput: tasks_v1.Schema$Task[],
+  ): { task: tasks_v1.Schema$Task; depth: number }[] {
+    const tasks = tasksInput.slice();
+    const idToTask = new Map<string, tasks_v1.Schema$Task>();
+    for (const t of tasks) {
+      if (t.id) idToTask.set(t.id, t);
+    }
+
+    const parentToChildren = new Map<string, tasks_v1.Schema$Task[]>();
+    const roots: tasks_v1.Schema$Task[] = [];
+
+    for (const t of tasks) {
+      const parentId = t.parent || "";
+      if (parentId && idToTask.has(parentId)) {
+        const arr = parentToChildren.get(parentId) || [];
+        arr.push(t);
+        parentToChildren.set(parentId, arr);
+      } else {
+        roots.push(t);
+      }
+    }
+
+    const sortFn = (
+      x: tasks_v1.Schema$Task,
+      y: tasks_v1.Schema$Task,
+    ) =>
+      this.comparePosition(x.position || null, y.position || null) ||
+      (x.title || "").localeCompare(y.title || "");
+
+    roots.sort(sortFn);
+    for (const arr of parentToChildren.values()) {
+      arr.sort(sortFn);
+    }
+
+    const ordered: { task: tasks_v1.Schema$Task; depth: number }[] = [];
+    const visit = (t: tasks_v1.Schema$Task, depth: number) => {
+      ordered.push({ task: t, depth });
+      const children = t.id ? parentToChildren.get(t.id) || [] : [];
+      for (const c of children) visit(c, depth + 1);
+    };
+
+    for (const r of roots) visit(r, 0);
+
+    return ordered;
   }
 
   private static formatTaskList(taskList: tasks_v1.Schema$Task[]) {
-    return taskList
-      .map((task, index) => `${index + 1}. ${this.formatTask(task)}`)
+    const ordered = this.buildHierarchy(taskList);
+    return ordered
+      .map(({ task, depth }, index) => this.indent(`${index + 1}. ${this.formatTask(task)}`, depth))
       .join("\n");
   }
 

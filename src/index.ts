@@ -32,11 +32,12 @@ const server = new Server(
 
 server.setRequestHandler(ListResourcesRequestSchema, async (request) => {
   const [allTasks, nextPageToken] = await TaskResources.list(request, tasks);
+  const ordered = TaskActions.buildHierarchy(allTasks);
   return {
-    resources: allTasks.map((task, index) => ({
+    resources: ordered.map(({ task, depth }, index) => ({
       uri: `gtasks:///${task.id}`,
       mimeType: "text/plain",
-      name: `${index + 1}. ${task.title}`,
+      name: TaskActions.indent(`${index + 1}. ${TaskActions.formatTask(task)}`, depth),
     })),
     nextCursor: nextPageToken,
   };
