@@ -297,16 +297,11 @@ export class TaskActions {
   static async update(request: CallToolRequest, tasks: tasks_v1.Tasks) {
     const taskListId =
       (request.params.arguments?.taskListId as string) || "@default";
-    const taskUri = request.params.arguments?.uri as string;
     const taskId = request.params.arguments?.id as string;
     const taskTitle = request.params.arguments?.title as string;
     const taskNotes = request.params.arguments?.notes as string;
     const taskStatus = request.params.arguments?.status as string;
     const taskDue = request.params.arguments?.due as string;
-
-    if (!taskUri) {
-      throw new Error("Task URI is required");
-    }
 
     if (!taskId) {
       throw new Error("Task ID is required");
@@ -322,7 +317,7 @@ export class TaskActions {
 
     const taskResponse = await tasks.tasks.update({
       tasklist: taskListId,
-      task: taskUri,
+      task: taskId,
       requestBody: task,
     });
 

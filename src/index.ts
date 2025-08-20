@@ -215,10 +215,6 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
               type: "string",
               description: "Task ID",
             },
-            uri: {
-              type: "string",
-              description: "Task URI",
-            },
             title: {
               type: "string",
               description: "Task title",
@@ -237,7 +233,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
               description: "Due date",
             },
           },
-          required: ["id", "uri"],
+          required: ["id"],
         },
       },
       {
