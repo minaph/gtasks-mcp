@@ -337,8 +337,45 @@ async function loadCredentialsAndRunServer() {
   }
 
   const credentials = JSON.parse(fs.readFileSync(credentialsPath, "utf-8"));
-  const auth = new google.auth.OAuth2();
+
+  // Initialize OAuth2 client with clientId/clientSecret/redirectUri to enable refresh
+  const keyfilePath = path.join(
+    path.dirname(new URL(import.meta.url).pathname),
+    "../gcp-oauth.keys.json",
+  );
+
+  if (!fs.existsSync(keyfilePath)) {
+    console.error(
+      `OAuth client keys not found at ${keyfilePath}. Please ensure gcp-oauth.keys.json is present.`,
+    );
+    process.exit(1);
+  }
+
+  const keyfile = JSON.parse(fs.readFileSync(keyfilePath, "utf-8"));
+  const { client_id, client_secret, redirect_uris } =
+    keyfile.installed || keyfile.web || {};
+
+  const redirectUri = Array.isArray(redirect_uris) && redirect_uris.length > 0
+    ? redirect_uris[0]
+    : undefined;
+
+  const auth = new google.auth.OAuth2(
+    client_id,
+    client_secret,
+    redirectUri,
+  );
   auth.setCredentials(credentials);
+
+  // Persist refreshed tokens so subsequent runs keep working
+  auth.on("tokens", (tokens) => {
+    const updated = { ...credentials, ...tokens };
+    try {
+      fs.writeFileSync(credentialsPath, JSON.stringify(updated));
+    } catch (e) {
+      console.error("Failed to persist updated credentials:", e);
+    }
+  });
+
   google.options({ auth });
 
   const transport = new StdioServerTransport();
